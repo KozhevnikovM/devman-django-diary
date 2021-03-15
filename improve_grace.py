@@ -57,12 +57,21 @@ class Command(BaseCommand):
             group_letter=schoolkid.group_letter,
             subject__title__contains=subject_title).order_by('-date').first()
         if not last_lesson:
-            return
+            return (None, None)
+            
         subject = last_lesson.subject
-        text = random.choice(commendations)
-        teacher=last_lesson.teacher
         date = last_lesson.date
-        return Commendation.objects.create(teacher=teacher, subject=subject, schoolkid=schoolkid, created=date, text=text)
+        teacher = last_lesson.teacher
+
+        return Commendation.objects.get_or_create(
+            schoolkid=schoolkid,
+            subject=subject,
+            created=date,
+            defaults={
+                'text': random.choice(commendations),
+                'teacher': teacher
+            }
+        )
 
     def handle(self, *args, **options):
         schoolkids_fullname = options['schoolkid_fullname']
@@ -79,8 +88,9 @@ class Command(BaseCommand):
 
         if options['subject']:
             subject = options['subject']
-            commendation = self.create_commendation(schoolkids_fullname, subject)
-            result = self.style.SUCCESS(f'Учитель {commendation.teacher} похвалил {commendation.schoolkid}: {commendation.text}')\
+            commendation, result = self.create_commendation(schoolkids_fullname, subject)
+            print(commendation)
+            output = self.style.SUCCESS(f'Учитель {commendation.teacher} похвалил {commendation.schoolkid}: {commendation.text}')\
                  if commendation\
                  else self.style.WARNING('Предмет не найден')
-            self.stdout.write(self.style.WARNING(result))
+            self.stdout.write(self.style.WARNING(output))
