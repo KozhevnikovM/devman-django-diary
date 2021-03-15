@@ -4,4 +4,8 @@
 Исходный код дневника доступен [тут](https://github.com/devmanorg/e-diary/tree/master)
 
 ## Как исправить плохие оценки?
-1. Зайти на сервер
+1. Зайти на сервер в папку с проектом
+2. Склонировать данный репозиторий
+  ```
+  git clone https://github.com/KozhevnikovM/devman-django-diary.git datacenter/management/commands
+  ```
