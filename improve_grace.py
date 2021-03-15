@@ -16,7 +16,7 @@ class Command(BaseCommand):
         return Mark.objects.filter(schoolkid=schoolkid, points__in=[2, 3]).update(points=5)
 
     def remove_chastisements(self, schoolkid):
-        return Chastisement.objects.filter(schoolkid=schoolkid).delete()
+        return Chastisement.objects.filter(schoolkid=schoolkid).delete()[0]
         
     def create_commendation(self, schoolkids_fullname, subject_title):
         commendations = [
