@@ -1,23 +1,39 @@
-from django.core.management.base import BaseCommand, CommandError
-from datacenter.models import Mark, Schoolkid, Chastisement, Commendation, Lesson
 import random
-
+from django.core.management.base import BaseCommand, CommandError
+from datacenter.models import Mark, Schoolkid, Chastisement, \
+    Commendation, Lesson
 
 
 class Command(BaseCommand):
     help = "Улучшает успеваемость"
 
     def add_arguments(self, parser):
-        parser.add_argument('schoolkid_fullname', type=str, help='Если не указано дополнительных параметров, ищет ученика и исправляет плохие оценки на 5')
-        parser.add_argument('--subject', type=str, help='Добавляет случайную похвалу от учителя к последнему уроку по предмету', )
+        parser.add_argument(
+            'schoolkid_fullname',
+            type=str,
+            help='Если не указано дополнительных параметров,\
+                ищет ученика и исправляет плохие оценки на 5'
+        )
+        parser.add_argument(
+            '--subject',
+            type=str,
+            help='Добавляет случайную похвалу от учителя \
+                к последнему уроку по предмету'
+        )
 
-       
     def fix_marks(self, schoolkid):
-        return Mark.objects.filter(schoolkid=schoolkid, points__in=[2, 3]).update(points=5)
+        return Mark.objects
+        .filter(
+            schoolkid=schoolkid,
+            points__in=[2, 3]
+        )
+        .update(points=5)
 
     def remove_chastisements(self, schoolkid):
-        return Chastisement.objects.filter(schoolkid=schoolkid).delete()[0]
-        
+        return Chastisement.objects
+        .filter(schoolkid=schoolkid)
+        .delete()[0]
+
     def create_commendation(self, schoolkids_fullname, subject_title):
         commendations = [
             'Молодец!',
@@ -51,14 +67,15 @@ class Command(BaseCommand):
             'Ты многое сделал, я это вижу!',
             'Теперь у тебя точно все получится!'
         ]
-        schoolkid = Schoolkid.objects.get(full_name__contains=schoolkids_fullname)
+        schoolkid = Schoolkid.objects.get(
+            full_name__contains=schoolkids_fullname)
         last_lesson = Lesson.objects.filter(
             year_of_study=schoolkid.year_of_study,
             group_letter=schoolkid.group_letter,
             subject__title__contains=subject_title).order_by('-date').first()
         if not last_lesson:
             return (None, None)
-            
+
         subject = last_lesson.subject
         date = last_lesson.date
         teacher = last_lesson.teacher
@@ -75,22 +92,30 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         schoolkids_fullname = options['schoolkid_fullname']
-        
+
         try:
-            schoolkid = Schoolkid.objects.get(full_name__contains=schoolkids_fullname)
+            schoolkid = Schoolkid.objects.get(
+                full_name__contains=schoolkids_fullname)
         except Schoolkid.DoesNotExist:
             raise CommandError(f'Ученика {schoolkids_fullname} не найдено')
         except Schoolkid.MultipleObjectsReturned:
-            raise CommandError(f'Найдено несколько учеников с именем {schoolkids_fullname}: {Schoolkid.objects.filter(full_name__contains=schoolkids_fullname)}') 
-        
-        self.stdout.write(self.style.SUCCESS(f'Исправлено {self.fix_marks(schoolkid)} оценок'))
-        self.stdout.write(self.style.SUCCESS(f'Удалено {self.remove_chastisements(schoolkid)} замечаний'))
+            found_schoolkids = Schoolkid.objects.filter(
+                full_name__contains=schoolkids_fullname)
+            raise CommandError(
+                f'Найдено несколько учеников с именем {schoolkids_fullname}: \
+                     {found_schoolkids}')
+
+        self.stdout.write(self.style.SUCCESS(
+            f'Исправлено {self.fix_marks(schoolkid)} оценок'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Удалено {self.remove_chastisements(schoolkid)} замечаний'))
 
         if options['subject']:
             subject = options['subject']
-            commendation, result = self.create_commendation(schoolkids_fullname, subject)
-            print(commendation)
-            output = self.style.SUCCESS(f'Учитель {commendation.teacher} похвалил {commendation.schoolkid}: {commendation.text}')\
-                 if commendation\
-                 else self.style.WARNING('Предмет не найден')
+            commendation, result = self.create_commendation(
+                schoolkids_fullname, subject)
+            output = self.style.SUCCESS(f'Учитель {commendation.teacher} похвалил \
+                 {commendation.schoolkid}: {commendation.text}')\
+                if commendation\
+                else self.style.WARNING('Предмет не найден')
             self.stdout.write(self.style.WARNING(output))
