@@ -21,10 +21,6 @@ class Command(BaseCommand):
                 к последнему уроку по предмету'
         )
 
-  
-
-
-
     def fix_marks(self, schoolkid):
         return Mark.objects.filter(
             schoolkid=schoolkid,
@@ -118,9 +114,9 @@ class Command(BaseCommand):
                 'Учитель {teacher} похвалил {schoolkid}: {commendation}'
             )
             negative_output = self.style.WARNING('Предмет не найден')
-            output = negative_output if not self.last_lesson else success_output.format(
+            output = success_output.format(
                 teacher=self.last_lesson.teacher,
                 schoolkid=self.schoolkid,
                 commendation=self.create_commendation()
-            )
+            ) if self.last_lesson else negative_output
             self.stdout.write(output)
