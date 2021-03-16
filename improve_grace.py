@@ -22,17 +22,15 @@ class Command(BaseCommand):
         )
 
     def fix_marks(self, schoolkid):
-        return Mark.objects
-        .filter(
+        return Mark.objects.filter(
             schoolkid=schoolkid,
             points__in=[2, 3]
-        )
-        .update(points=5)
+            ).update(points=5)
 
     def remove_chastisements(self, schoolkid):
-        return Chastisement.objects
-        .filter(schoolkid=schoolkid)
-        .delete()[0]
+        return Chastisement.objects.filter(
+            schoolkid=schoolkid
+            ).delete()[0]
 
     def create_commendation(self, schoolkids_fullname, subject_title):
         commendations = [
@@ -118,4 +116,4 @@ class Command(BaseCommand):
                  {commendation.schoolkid}: {commendation.text}')\
                 if commendation\
                 else self.style.WARNING('Предмет не найден')
-            self.stdout.write(self.style.WARNING(output))
+            self.stdout.write(output)
