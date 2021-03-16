@@ -123,5 +123,4 @@ class Command(BaseCommand):
                 schoolkid=self.schoolkid,
                 commendation=self.create_commendation()
             )
-            print(output)
-            
+            self.stdout.write(output)
