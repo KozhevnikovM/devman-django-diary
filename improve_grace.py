@@ -21,6 +21,10 @@ class Command(BaseCommand):
                 к последнему уроку по предмету'
         )
 
+  
+
+
+
     def fix_marks(self, schoolkid):
         return Mark.objects.filter(
             schoolkid=schoolkid,
@@ -32,7 +36,7 @@ class Command(BaseCommand):
             schoolkid=schoolkid
             ).delete()[0]
 
-    def create_commendation(self, schoolkids_fullname, subject_title):
+    def create_commendation(self):
         commendations = [
             'Молодец!',
             'Отлично!',
@@ -65,55 +69,59 @@ class Command(BaseCommand):
             'Ты многое сделал, я это вижу!',
             'Теперь у тебя точно все получится!'
         ]
-        schoolkid = Schoolkid.objects.get(
-            full_name__contains=schoolkids_fullname)
-        last_lesson = Lesson.objects.filter(
-            year_of_study=schoolkid.year_of_study,
-            group_letter=schoolkid.group_letter,
-            subject__title__contains=subject_title).order_by('-date').first()
-        if not last_lesson:
-            return (None, None)
 
-        subject = last_lesson.subject
-        date = last_lesson.date
-        teacher = last_lesson.teacher
+        if not self.last_lesson:
+            return None
 
-        return Commendation.objects.get_or_create(
-            schoolkid=schoolkid,
-            subject=subject,
-            created=date,
+        commendation, create = Commendation.objects.get_or_create(
+            schoolkid=self.schoolkid,
+            subject=self.last_lesson.subject,
+            created=self.last_lesson.date,
             defaults={
                 'text': random.choice(commendations),
-                'teacher': teacher
+                'teacher': self.last_lesson.teacher
             }
         )
+
+        return commendation.text
 
     def handle(self, *args, **options):
         schoolkids_fullname = options['schoolkid_fullname']
 
         try:
-            schoolkid = Schoolkid.objects.get(
-                full_name__contains=schoolkids_fullname)
+            self.schoolkid = Schoolkid.objects.get(
+                full_name__contains=schoolkids_fullname
+            )
         except Schoolkid.DoesNotExist:
             raise CommandError(f'Ученика {schoolkids_fullname} не найдено')
         except Schoolkid.MultipleObjectsReturned:
             found_schoolkids = Schoolkid.objects.filter(
-                full_name__contains=schoolkids_fullname)
+                full_name__contains=schoolkids_fullname
+            )
             raise CommandError(
                 f'Найдено несколько учеников с именем {schoolkids_fullname}: \
-                     {found_schoolkids}')
+                     {found_schoolkids}'
+            )
 
         self.stdout.write(self.style.SUCCESS(
-            f'Исправлено {self.fix_marks(schoolkid)} оценок'))
+            f'Исправлено {self.fix_marks(self.schoolkid)} оценок'))
         self.stdout.write(self.style.SUCCESS(
-            f'Удалено {self.remove_chastisements(schoolkid)} замечаний'))
+            f'Удалено {self.remove_chastisements(self.schoolkid)} замечаний'))
 
         if options['subject']:
-            subject = options['subject']
-            commendation, result = self.create_commendation(
-                schoolkids_fullname, subject)
-            output = self.style.SUCCESS(f'Учитель {commendation.teacher} похвалил \
-                 {commendation.schoolkid}: {commendation.text}')\
-                if commendation\
-                else self.style.WARNING('Предмет не найден')
-            self.stdout.write(output)
+            self.last_lesson = Lesson.objects.filter(
+                year_of_study=self.schoolkid.year_of_study,
+                group_letter=self.schoolkid.group_letter,
+                subject__title__contains=options['subject']
+            ).order_by('-date').first()
+            success_output = self.style.SUCCESS(
+                'Учитель {teacher} похвалил {schoolkid}: {commendation}'
+            )
+            negative_output = self.style.WARNING('Предмет не найден')
+            output = negative_output if not self.last_lesson else success_output.format(
+                teacher=self.last_lesson.teacher,
+                schoolkid=self.schoolkid,
+                commendation=self.create_commendation()
+            )
+            print(output)
+            
